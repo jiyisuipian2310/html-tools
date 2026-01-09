@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket实时通信演示（带参数验证）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        /* 修改：所有面板统一高度 */
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 600px; /* 统一高度 */
+        }
+        
+        .panel h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            flex-shrink: 0; /* 防止标题被压缩 */
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-connected {
+            background-color: #2ecc71;
+            box-shadow: 0 0 10px #2ecc71;
+        }
+        
+        .status-disconnected {
+            background-color: #e74c3c;
+            box-shadow: 0 0 10px #e74c3c;
+        }
+        
+        .status-connecting {
+            background-color: #f39c12;
+            box-shadow: 0 0 10px #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .connection-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-connect {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-disconnect {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-send {
+            background-color: #3498db;
+            color: white;
+            height: 50px; /* 固定高度 */
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 修改：参数设置区域填充可用空间 */
+        .params-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            flex: 1; /* 填充空间 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 修改：参数区域内部内容布局 */
+        .params-content {
+            flex: 1; /* 填充参数区域空间 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .params-title {
+            font-size: 1.1rem;
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .params-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+            flex: 1; /* 字段区域填充空间 */
+        }
+        
+        .field-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .field-label {
+            margin-bottom: 5px;
+            color: #495057;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .field-optional {
+            color: #6c757d;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+        
+        .field-error {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            min-height: 20px;
+        }
+        
+        /* 修改：参数按钮区域固定在底部 */
+        .params-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: auto; /* 推到底部 */
+            flex-shrink: 0; /* 防止压缩 */
+        }
+        
+        .params-buttons button {
+            flex: 1; /* 使按钮等宽 */
+            min-width: 0; /* 防止按钮溢出 */
+        }
+        
+        /* 修改：消息输入区域使用flex布局 */
+        .message-input-area {
+            flex: 1; /* 占用可用空间 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 修改：文本区域填充可用空间 */
+        textarea {
+            width: 100%;
+            flex: 1; /* 填充可用空间 */
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: none; /* 禁止手动调整大小，保持布局稳定 */
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+            min-height: 120px; /* 保持最小高度 */
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        /* 修改：消息容器填充剩余空间 */
+        .messages-container {
+            flex: 1; /* 填充面板剩余空间 */
+            overflow-y: auto;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            min-height: 400px; /* 最小高度确保显示 */
+        }
+        
+        .message {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            word-break: break-word;
+        }
+        
+        .message-sent {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        
+        .message-received {
+            background-color: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .message-system {
+            background-color: #f8f9fa;
+            border-left: 5px solid #6c757d;
+            font-style: italic;
+            text-align: center;
+        }
+        
+        .message-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* 修改：服务器信息区域放置在底部 */
+        .server-info {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            padding: 15px 0 0 0;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            flex-shrink: 0; /* 防止压缩 */
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .panel {
+                min-width: 100%;
+                height: auto !important; /* 移动端恢复自动高度 */
+                min-height: 400px; /* 保持一定高度 */
+            }
+            
+            .params-fields {
+                grid-template-columns: 1fr;
+            }
+            
+            .params-buttons {
+                flex-direction: column;
+                margin-top: 20px;
+            }
+            
+            .message-input-area {
+                height: auto;
+            }
+            
+            textarea {
+                min-height: 150px;
+                resize: vertical; /* 移动端允许调整大小 */
+            }
+            
+            .messages-container {
+                min-height: 300px; /* 移动端适当降低最小高度 */
+            }
+            
+            .server-info {
+                margin-top: 20px; /* 移动端恢复正常间距 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>WebSocket实时通信演示（带参数验证）</h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2>连接控制</h2>
+                
+                <!-- 参数设置区域 -->
+                <div class="params-section">
+                    <div class="params-content">
+                        <div class="params-title">
+                            <span>连接参数设置</span>
+                        </div>
+                        
+                        <div class="params-fields">
+                            <div class="field-group">
+                                <label class="field-label">服务器地址</label>
+                                <input type="text" id="serverUrl" placeholder="ws://localhost:8080" value="ws://localhost:8080">
+                                <div id="serverError" class="field-error"></div>
+                            </div>
+                            
+                            <div class="field-group">
+                                <label class="field-label">参数1 <span class="field-optional">(可选)</span></label>
+                                <input type="text" id="param1" placeholder="请输入参数1">
+                                <div id="param1Error" class="field-error"></div>
+                            </div>
+                            
+                            <div class="field-group">
+                                <label class="field-label">参数2 <span class="field-optional">(可选)</span></label>
+                                <input type="text" id="param2" placeholder="请输入参数2">
+                                <div id="param2Error" class="field-error"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 将连接控制按钮移到参数设置区域内部 -->
+                    <div class="params-buttons">
+                        <button id="connectBtn" class="btn-connect">连接</button>
+                        <button id="disconnectBtn" class="btn-disconnect" disabled>断开</button>
+                    </div>
+                </div>
+                
+                <!--  <div class="connection-status">
+                    <div id="statusIndicator" class="status-indicator status-disconnected"></div>
+                    <span id="statusText">未连接</span>
+                </div> -->
+            </div>
+            
+            <div class="panel">
+                <h2>消息收发</h2>
+                
+                <div class="message-input-area">
+                    <textarea id="messageInput" placeholder="请输入要发送的消息..."></textarea>
+                    <button id="sendBtn" class="btn-send" disabled>发送消息</button>
+                </div>
+                
+                <div class="server-info">
+                    <p>发送消息后，服务器会将消息原样返回（回显模式）。</p>
+                    <p>已发送: <span id="sentCount">0</span> 条 | 已接收: <span id="receivedCount">0</span> 条</p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>消息记录</h2>
+                
+                <div class="messages-container" id="messagesContainer">
+                    <div class="message message-system">
+                        WebSocket消息记录将显示在这里
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>WebSocket演示 &copy; 2023 | 使用HTML5 WebSocket API实现实时双向通信</p>
+        </footer>
+    </div>
+
+    <script>
+        // WebSocket相关变量
+        let socket = null;
+        let isConnected = false;
+        let sentCount = 0;
+        let receivedCount = 0;
+        
+        // DOM元素
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const param1Input = document.getElementById('param1');
+        const param2Input = document.getElementById('param2');
+        const messageInput = document.getElementById('messageInput');
+        const messagesContainer = document.getElementById('messagesContainer');
+        // const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const sentCountElement = document.getElementById('sentCount');
+        const receivedCountElement = document.getElementById('receivedCount');
+        const validationErrors = document.getElementById('validationErrors');
+        
+        // 错误元素
+        const serverError = document.getElementById('serverError');
+        const param1Error = document.getElementById('param1Error');
+        const param2Error = document.getElementById('param2Error');
+        
+        // 验证连接参数
+        function validateConnectionParams() {
+            let isValid = true;
+            const errors = [];
+            
+            // 清除之前的错误信息
+            clearErrors();
+            
+            // 验证服务器地址
+            const serverUrl = serverUrlInput.value.trim();
+            if (!serverUrl) {
+                serverError.textContent = '服务器地址不能为空';
+                errors.push('服务器地址不能为空');
+                isValid = false;
+            } else if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+                serverError.textContent = '服务器地址必须以 ws:// 或 wss:// 开头';
+                errors.push('服务器地址格式不正确');
+                isValid = false;
+            }
+            
+            // 验证参数1（可选，如果有值则验证长度）
+            const param1 = param1Input.value.trim();
+            if (param1 && param1.length < 1) {
+                param1Error.textContent = '参数1至少1个字符';
+                errors.push('参数1至少需要1个字符');
+                isValid = false;
+            }
+            
+            // 验证参数2（可选，如果有值则验证长度）
+            const param2 = param2Input.value.trim();
+            if (param2 && param2.length < 1) {
+                param2Error.textContent = '参数2至少1个字符';
+                errors.push('参数2至少需要1个字符');
+                isValid = false;
+            }
+            
+            // 显示验证结果
+            if (!isValid) {
+                validationErrors.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+            }
+            
+            return isValid;
+        }
+        
+        // 清除所有错误信息
+        function clearErrors() {
+            serverError.textContent = '';
+            param1Error.textContent = '';
+            param2Error.textContent = '';
+        }
+        
+        // 构建带参数的WebSocket URL
+        function buildWebSocketUrl() {
+            let url = serverUrlInput.value.trim();
+            
+            // 添加查询参数
+            const params = new URLSearchParams();
+            
+            // 添加参数1（如果有值）
+            const param1 = param1Input.value.trim();
+            if (param1) {
+                params.append('param1', param1);
+            }
+            
+            // 添加参数2（如果有值）
+            const param2 = param2Input.value.trim();
+            if (param2) {
+                params.append('param2', param2);
+            }
+            
+            const queryString = params.toString();
+            if (queryString) {
+                url += (url.includes('?') ? '&' : '?') + queryString;
+            }
+            
+            return url;
+        }
+        
+        // 连接到WebSocket服务器
+        function connectWebSocket() {
+            // 先验证参数
+            if (!validateConnectionParams()) {
+                return;
+            }
+            
+            const finalUrl = buildWebSocketUrl();
+            
+            updateConnectionStatus('connecting');
+            addMessage(`正在连接到: ${serverUrlInput.value}`, 'system', false);
+            
+            try {
+                socket = new WebSocket(finalUrl);
+                
+                socket.onopen = function(event) {
+                    console.log('WebSocket连接已建立', event);
+                    updateConnectionStatus('connected');
+                    
+                    // 获取参数值
+                    const param1 = param1Input.value.trim();
+                    const param2 = param2Input.value.trim();
+                    
+                    // 如果有参数，发送连接信息
+                    if (param1 || param2) {
+                        setTimeout(() => {
+                            const connectionInfo = {
+                                type: 'connection',
+                                clientType: 'browser',
+                                timestamp: new Date().toISOString()
+                            };
+                            
+                            // 添加参数1（如果有值）
+                            if (param1) {
+                                connectionInfo.param1 = param1;
+                            }
+                            
+                            // 添加参数2（如果有值）
+                            if (param2) {
+                                connectionInfo.param2 = param2;
+                            }
+                            
+                            socket.send(JSON.stringify(connectionInfo));
+                            addMessage('已发送连接信息', 'system', false);
+                        }, 500);
+                    }
+                    
+                    addMessage(`已成功连接到WebSocket服务器`, 'system', false);
+                };
+                
+                socket.onmessage = function(event) {
+                    console.log('收到消息:', event.data);
+                    receivedCount++;
+                    receivedCountElement.textContent = receivedCount;
+                    
+                    // 尝试解析JSON消息
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'connection-response') {
+                            if (data.success) {
+                                addMessage(`连接成功: ${data.message}`, 'system', false);
+                            } else {
+                                addMessage(`连接失败: ${data.message}`, 'system', false);
+                            }
+                        } else {
+                            addMessage(JSON.stringify(data, null, 2), 'received', false);
+                        }
+                    } catch {
+                        addMessage(event.data, 'received', false);
+                    }
+                };
+                
+                socket.onclose = function(event) {
+                    console.log('WebSocket连接已关闭', event);
+                    updateConnectionStatus('disconnected');
+                    
+                    let closeMessage = 'WebSocket连接已关闭';
+                    if (event.code !== 1000) {
+                        closeMessage += `，代码: ${event.code}`;
+                    }
+                    if (event.reason) {
+                        closeMessage += `，原因: ${event.reason}`;
+                    }
+                    
+                    addMessage(closeMessage, 'system', false);
+                    socket = null;
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    updateConnectionStatus('error');
+                    addMessage('WebSocket连接错误，请检查服务器地址或网络连接', 'system', false);
+                };
+                
+            } catch (error) {
+                console.error('创建WebSocket连接时出错:', error);
+                updateConnectionStatus('error');
+                addMessage(`连接失败: ${error.message}`, 'system', false);
+            }
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus(status) {
+            // statusIndicator.className = 'status-indicator';
+            
+            switch(status) {
+                case 'connected':
+                    // statusIndicator.classList.add('status-connected');
+                    // statusText.textContent = '已连接';
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    sendBtn.disabled = false;
+                    isConnected = true;
+                    break;
+                    
+                case 'disconnected':
+                    // statusIndicator.classList.add('status-disconnected');
+                    // statusText.textContent = '已断开连接';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    isConnected = false;
+                    break;
+                    
+                case 'connecting':
+                    // statusIndicator.classList.add('status-connecting');
+                    // statusText.textContent = '连接中...';
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    break;
+                    
+                case 'error':
+                    // statusIndicator.classList.add('status-disconnected');
+                    // statusText.textContent = '连接错误';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    isConnected = false;
+                    break;
+            }
+        }
+        
+        // 添加消息到消息记录
+        function addMessage(content, type, isSent = true) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message message-${type}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            let directionText = isSent ? '发送' : '接收';
+            
+            messageElement.innerHTML = `
+                <div>${content}</div>
+                <div class="message-info">
+                    <span>${directionText}</span>
+                    <span>${timeString}</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            
+            // 自动滚动到底部
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // 断开WebSocket连接
+        function disconnectWebSocket() {
+            if (socket && isConnected) {
+                socket.close(1000, '用户主动断开连接');
+            }
+        }
+        
+        // 发送消息
+        function sendMessage() {
+            if (!isConnected || !socket) {
+                alert('未连接到WebSocket服务器');
+                return;
+            }
+            
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('请输入要发送的消息');
+                return;
+            }
+            
+            try {
+                socket.send(message);
+                sentCount++;
+                sentCountElement.textContent = sentCount;
+                addMessage(message, 'sent', true);
+                // messageInput.value = '';
+            } catch (error) {
+                console.error('发送消息时出错:', error);
+                addMessage(`发送失败: ${error.message}`, 'system', false);
+            }
+        }
+        
+        // 初始化事件监听
+        function initEventListeners() {
+            // 连接按钮
+            connectBtn.addEventListener('click', connectWebSocket);
+            
+            // 断开连接按钮
+            disconnectBtn.addEventListener('click', disconnectWebSocket);
+            
+            // 发送按钮
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // 在输入框中按Enter发送消息
+            messageInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // 在服务器地址输入框中按Enter连接
+            serverUrlInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+            
+            // 在参数1输入框中按Enter连接
+            param1Input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+            
+            // 在参数2输入框中按Enter连接
+            param2Input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            updateConnectionStatus('disconnected');
+            
+            // 添加一些示例消息
+            setTimeout(() => {
+                addMessage('这是一个带参数验证的WebSocket演示应用。', 'system', false);
+                addMessage('请填写服务器地址，参数1和参数2为可选。', 'system', false);
+                addMessage('您也可以按Enter键快速连接或发送消息。', 'system', false);
+                addMessage('参数将通过URL查询参数方式传递给服务器。', 'system', false);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

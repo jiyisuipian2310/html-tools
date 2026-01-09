@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket & AES 工具集成</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #162447);
+            color: #e6e6e6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #0f3460, #1a1a2e);
+            padding: 20px 30px;
+            text-align: center;
+            border-bottom: 2px solid #00b4db;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .subtitle {
+            color: #a0a0c0;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 150px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #0f3460;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #1a1a2e;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title {
+            color: #00b4db;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #1a1a2e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar-title i {
+            font-size: 1.5rem;
+        }
+        
+        .function-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .function-item {
+            padding: 15px;
+            background-color: #1a1a2e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .function-item:hover {
+            background-color: #1f4068;
+            transform: translateX(5px);
+        }
+        
+        .function-item.active {
+            background-color: #00b4db;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .function-item i {
+            font-size: 1.2rem;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .function-content {
+            display: none;
+            height: 100%;
+        }
+        
+        .function-content.active {
+            display: block;
+        }
+        
+        .function-title {
+            color: #00b4db;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0f3460;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: #a0a0c0;
+            font-size: 0.9rem;
+            background-color: #0f3460;
+            border-top: 1px solid #1a1a2e;
+            margin-top: auto;
+        }
+        
+        /* WebSocket 样式 */
+        .websocket-content .container {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .websocket-content .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .websocket-content .panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: #1f4068;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            color: #e6e6e6;
+        }
+        
+        .websocket-content h2 {
+            color: #00b4db;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0f3460;
+        }
+        
+        .websocket-content .params-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #1a1a2e;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .websocket-content .params-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .websocket-content .params-title {
+            font-size: 1.1rem;
+            color: #a0a0c0;
+            margin-bottom: 15px;
+        }
+        
+        .websocket-content .params-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+            flex: 1;
+        }
+        
+        .websocket-content .field-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .websocket-content .field-label {
+            margin-bottom: 5px;
+            color: #a0a0c0;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .websocket-content .field-optional {
+            color: #6c757d;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+        
+        .websocket-content .field-error {
+            color: #f46b45;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            min-height: 20px;
+        }
+        
+        .websocket-content .params-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+        
+        .websocket-content input[type="text"],
+        .websocket-content textarea {
+            padding: 12px 15px;
+            background-color: #1a1a2e;
+            border: 2px solid #0f3460;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #e6e6e6;
+            transition: border-color 0.3s;
+        }
+        
+        .websocket-content input[type="text"]:focus,
+        .websocket-content textarea:focus {
+            outline: none;
+            border-color: #00b4db;
+        }
+        
+        .websocket-content button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .websocket-content .btn-connect {
+            background-color: #2ecc71;
+            color: white;
+            flex: 1;
+        }
+        
+        .websocket-content .btn-disconnect {
+            background-color: #f46b45;
+            color: white;
+            flex: 1;
+        }
+        
+        .websocket-content .btn-send {
+            background-color: #00b4db;
+            color: white;
+            height: 50px;
+        }
+        
+        .websocket-content button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .websocket-content button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .websocket-content .message-input-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .websocket-content textarea {
+            width: 100%;
+            flex: 1;
+            padding: 15px;
+            resize: none;
+            margin-bottom: 15px;
+            min-height: 120px;
+        }
+        
+        .websocket-content .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 2px solid #0f3460;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #1a1a2e;
+            min-height: 400px;
+        }
+        
+        .websocket-content .message {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            word-break: break-word;
+        }
+        
+        .websocket-content .message-sent {
+            background-color: rgba(46, 204, 113, 0.2);
+            border-left: 5px solid #2ecc71;
+        }
+        
+        .websocket-content .message-received {
+            background-color: rgba(0, 180, 219, 0.2);
+            border-left: 5px solid #00b4db;
+        }
+        
+        .websocket-content .message-system {
+            background-color: rgba(108, 117, 125, 0.2);
+            border-left: 5px solid #6c757d;
+            font-style: italic;
+            text-align: center;
+        }
+        
+        .websocket-content .message-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #a0a0c0;
+            margin-top: 5px;
+        }
+        
+        .websocket-content .server-info {
+            font-size: 0.9rem;
+            color: #a0a0c0;
+            padding: 15px 0 0 0;
+            border-top: 1px solid #0f3460;
+            margin-top: 20px;
+            flex-shrink: 0;
+        }
+        
+        /* AES 样式 */
+        .aes-content .container {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .aes-content .config-section {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            padding: 15px;
+            background-color: #1f4068;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            margin-bottom: 25px;
+        }
+        
+        .aes-content .config-item {
+            margin: 10px 0;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .aes-content .config-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00b4db;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .aes-content .config-value {
+            background-color: #1a1a2e;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+        
+        .aes-content .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .aes-content .input-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #00b4db;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .aes-content .input-label i {
+            font-size: 1.2rem;
+        }
+        
+        .aes-content textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            background-color: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            color: #e6e6e6;
+            font-size: 1rem;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        .aes-content textarea:focus {
+            outline: none;
+            border-color: #00b4db;
+            box-shadow: 0 0 0 2px rgba(0, 180, 219, 0.2);
+        }
+        
+        .aes-content .button-section {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        
+        .aes-content button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+        
+        .aes-content .encrypt-btn {
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+        }
+        
+        .aes-content .encrypt-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(0, 180, 219, 0.3);
+        }
+        
+        .aes-content .decrypt-btn {
+            background: linear-gradient(135deg, #f46b45, #eea849);
+            color: white;
+        }
+        
+        .aes-content .decrypt-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(244, 107, 69, 0.3);
+        }
+        
+        .aes-content .clear-btn {
+            background: linear-gradient(135deg, #8e9eab, #eef2f3);
+            color: #162447;
+        }
+        
+        .aes-content .clear-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(142, 158, 171, 0.3);
+        }
+        
+        .aes-content .result-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .aes-content .result-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #00b4db;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .aes-content .result-box {
+            background-color: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            min-height: 100px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .aes-content .copy-btn {
+            align-self: flex-end;
+            padding: 10px 20px;
+            background-color: #1f4068;
+            color: #e6e6e6;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+        
+        .aes-content .copy-btn:hover {
+            background-color: #0f3460;
+        }
+        
+        .aes-content .warning {
+            background-color: rgba(244, 107, 69, 0.1);
+            border-left: 4px solid #f46b45;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 25px;
+        }
+        
+        .aes-content .warning-title {
+            color: #f46b45;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-around;
+                padding: 15px;
+            }
+            
+            .function-list {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .function-item {
+                min-width: 200px;
+            }
+            
+            .content-area {
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .websocket-content .main-content {
+                flex-direction: column;
+            }
+            
+            .websocket-content .panel {
+                min-width: 100%;
+                height: auto !important;
+                min-height: 400px;
+            }
+            
+            .websocket-content .params-fields {
+                grid-template-columns: 1fr;
+            }
+            
+            .websocket-content .params-buttons {
+                flex-direction: column;
+                margin-top: 20px;
+            }
+            
+            .websocket-content textarea {
+                min-height: 150px;
+                resize: vertical;
+            }
+            
+            .websocket-content .messages-container {
+                min-height: 300px;
+            }
+            
+            .aes-content .config-section {
+                flex-direction: column;
+            }
+            
+            .aes-content .config-item {
+                min-width: 100%;
+            }
+            
+            .aes-content .button-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .aes-content button {
+                width: 100%;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 
+    <header>
+        <h1><i class="fas fa-tools"></i>工具集成</h1>
+        <p class="subtitle">实时通信与数据加密解密工具集合</p>
+    </header>
+-->
+    
+    <div class="main-container">
+        <!-- 左侧功能导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-title">
+                <i class="fas fa-list"></i> 功能列表
+            </div>
+            <div class="function-list">
+                <div class="function-item active" data-function="websocket">
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>WebSocket通信</span>
+                </div>
+                <div class="function-item" data-function="aes">
+                    <i class="fas fa-lock"></i>
+                    <span>AES加密解密</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧内容区域 -->
+        <div class="content-area">
+            <!-- WebSocket 功能 -->
+            <div id="websocket-content" class="function-content active">
+                <h2 class="function-title"><i class="fas fa-broadcast-tower"></i> WebSocket实时通信</h2>
+                <div class="websocket-content">
+                    <div class="container">
+                        <div class="main-content">
+                            <div class="panel">
+                                <h2>连接控制</h2>
+                                
+                                <!-- 参数设置区域 -->
+                                <div class="params-section">
+                                    <div class="params-content">
+                                        <div class="params-title">
+                                            <span>连接参数设置</span>
+                                        </div>
+                                        
+                                        <div class="params-fields">
+                                            <div class="field-group">
+                                                <label class="field-label">服务器地址</label>
+                                                <input type="text" id="serverUrl" placeholder="ws://localhost:8080" value="ws://localhost:8080">
+                                                <div id="serverError" class="field-error"></div>
+                                            </div>
+                                            
+                                            <div class="field-group">
+                                                <label class="field-label">参数1 <span class="field-optional">(可选)</span></label>
+                                                <input type="text" id="param1" placeholder="请输入参数1">
+                                                <div id="param1Error" class="field-error"></div>
+                                            </div>
+                                            
+                                            <div class="field-group">
+                                                <label class="field-label">参数2 <span class="field-optional">(可选)</span></label>
+                                                <input type="text" id="param2" placeholder="请输入参数2">
+                                                <div id="param2Error" class="field-error"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 将连接控制按钮移到参数设置区域内部 -->
+                                    <div class="params-buttons">
+                                        <button id="connectBtn" class="btn-connect">连接</button>
+                                        <button id="disconnectBtn" class="btn-disconnect" disabled>断开</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="panel">
+                                <h2>消息收发</h2>
+                                
+                                <div class="message-input-area">
+                                    <textarea id="messageInput" placeholder="请输入要发送的消息..."></textarea>
+                                    <button id="sendBtn" class="btn-send" disabled>发送消息</button>
+                                </div>
+                                
+                                <div class="server-info">
+                                    <p>发送消息后，服务器会将消息原样返回（回显模式）。</p>
+                                    <p>已发送: <span id="sentCount">0</span> 条 | 已接收: <span id="receivedCount">0</span> 条</p>
+                                </div>
+                            </div>
+                            
+                            <div class="panel">
+                                <h2>消息记录</h2>
+                                
+                                <div class="messages-container" id="messagesContainer">
+                                    <div class="message message-system">
+                                        WebSocket消息记录将显示在这里
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AES加密解密功能 -->
+            <div id="aes-content" class="function-content">
+                <h2 class="function-title"><i class="fas fa-lock"></i> AES-CBC 加密/解密工具</h2>
+                <div class="aes-content">
+                    <div class="container">
+                        <div class="config-section">
+                            <div class="config-item">
+                                <span class="config-label">初始化向量 (IV):</span>
+                                <div class="config-value">a1b2c3d4e5f6g7h8</div>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">密钥 (Key):</span>
+                                <div class="config-value">63dTjxISXlwAso0n</div>
+                            </div>
+                        </div>
+                        
+                        <div class="main-content">
+                            <div class="input-section">
+                                <label class="input-label">
+                                    <i class="fas fa-keyboard"></i> 输入文本
+                                </label>
+                                <textarea id="inputText" placeholder="在此输入要加密或解密的文本..."></textarea>
+                            </div>
+                            
+                            <div class="button-section">
+                                <button class="encrypt-btn" id="encryptBtn">
+                                    <i class="fas fa-lock"></i> 加密文本
+                                </button>
+                                <button class="decrypt-btn" id="decryptBtn">
+                                    <i class="fas fa-unlock"></i> 解密文本
+                                </button>
+                                <button class="clear-btn" id="clearBtn">
+                                    <i class="fas fa-broom"></i> 清空内容
+                                </button>
+                            </div>
+                            
+                            <div class="result-section">
+                                <label class="result-label">
+                                    <i class="fas fa-poll"></i> 结果
+                                </label>
+                                <div class="result-box" id="resultBox"></div>
+                                <button class="copy-btn" id="copyBtn">
+                                    <i class="far fa-copy"></i> 复制结果
+                                </button>
+                            </div>
+                            
+                            <div class="warning">
+                                <div class="warning-title">
+                                    <i class="fas fa-exclamation-triangle"></i> 安全提示
+                                </div>
+                                <p>本工具使用固定密钥和初始化向量(IV)，适用于演示和学习目的。在实际生产环境中，应使用随机生成的密钥和IV，并妥善保管密钥。</p>
+                                <p style="margin-top: 8px;">注：本工具运行在浏览器端，所有加解密操作均在本地完成，数据不会发送到服务器。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>WebSocket & AES 工具集成 &copy; 2023 | 使用HTML5 WebSocket API和CryptoJS库实现</p>
+    </footer>
+
+    <!-- 引入 CryptoJS 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <script>
+        // 功能切换逻辑
+        document.querySelectorAll('.function-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有活动状态
+                document.querySelectorAll('.function-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // 隐藏所有功能内容
+                document.querySelectorAll('.function-content').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // 激活当前功能
+                this.classList.add('active');
+                const functionId = this.getAttribute('data-function');
+                document.getElementById(`${functionId}-content`).classList.add('active');
+            });
+        });
+
+        // ==================== WebSocket 功能代码 ====================
+        // WebSocket相关变量
+        let socket = null;
+        let isConnected = false;
+        let sentCount = 0;
+        let receivedCount = 0;
+        
+        // DOM元素
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const param1Input = document.getElementById('param1');
+        const param2Input = document.getElementById('param2');
+        const messageInput = document.getElementById('messageInput');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const sentCountElement = document.getElementById('sentCount');
+        const receivedCountElement = document.getElementById('receivedCount');
+        
+        // 错误元素
+        const serverError = document.getElementById('serverError');
+        const param1Error = document.getElementById('param1Error');
+        const param2Error = document.getElementById('param2Error');
+        
+        // 验证连接参数
+        function validateConnectionParams() {
+            let isValid = true;
+            
+            // 清除之前的错误信息
+            clearErrors();
+            
+            // 验证服务器地址
+            const serverUrl = serverUrlInput.value.trim();
+            if (!serverUrl) {
+                serverError.textContent = '服务器地址不能为空';
+                isValid = false;
+            } else if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+                serverError.textContent = '服务器地址必须以 ws:// 或 wss:// 开头';
+                isValid = false;
+            }
+            
+            // 验证参数1（可选，如果有值则验证长度）
+            const param1 = param1Input.value.trim();
+            if (param1 && param1.length < 1) {
+                param1Error.textContent = '参数1至少1个字符';
+                isValid = false;
+            }
+            
+            // 验证参数2（可选，如果有值则验证长度）
+            const param2 = param2Input.value.trim();
+            if (param2 && param2.length < 1) {
+                param2Error.textContent = '参数2至少1个字符';
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        // 清除所有错误信息
+        function clearErrors() {
+            serverError.textContent = '';
+            param1Error.textContent = '';
+            param2Error.textContent = '';
+        }
+        
+        // 构建带参数的WebSocket URL
+        function buildWebSocketUrl() {
+            let url = serverUrlInput.value.trim();
+            
+            // 添加查询参数
+            const params = new URLSearchParams();
+            
+            // 添加参数1（如果有值）
+            const param1 = param1Input.value.trim();
+            if (param1) {
+                params.append('param1', param1);
+            }
+            
+            // 添加参数2（如果有值）
+            const param2 = param2Input.value.trim();
+            if (param2) {
+                params.append('param2', param2);
+            }
+            
+            const queryString = params.toString();
+            if (queryString) {
+                url += (url.includes('?') ? '&' : '?') + queryString;
+            }
+            
+            return url;
+        }
+        
+        // 连接到WebSocket服务器
+        function connectWebSocket() {
+            // 先验证参数
+            if (!validateConnectionParams()) {
+                return;
+            }
+            
+            const finalUrl = buildWebSocketUrl();
+            
+            updateConnectionStatus('connecting');
+            addMessage(`正在连接到: ${serverUrlInput.value}`, 'system', false);
+            
+            try {
+                socket = new WebSocket(finalUrl);
+                
+                socket.onopen = function(event) {
+                    console.log('WebSocket连接已建立', event);
+                    updateConnectionStatus('connected');
+                    
+                    // 获取参数值
+                    const param1 = param1Input.value.trim();
+                    const param2 = param2Input.value.trim();
+                    
+                    // 如果有参数，发送连接信息
+                    if (param1 || param2) {
+                        setTimeout(() => {
+                            const connectionInfo = {
+                                type: 'connection',
+                                clientType: 'browser',
+                                timestamp: new Date().toISOString()
+                            };
+                            
+                            // 添加参数1（如果有值）
+                            if (param1) {
+                                connectionInfo.param1 = param1;
+                            }
+                            
+                            // 添加参数2（如果有值）
+                            if (param2) {
+                                connectionInfo.param2 = param2;
+                            }
+                            
+                            socket.send(JSON.stringify(connectionInfo));
+                            addMessage('已发送连接信息', 'system', false);
+                        }, 500);
+                    }
+                    
+                    addMessage(`已成功连接到WebSocket服务器`, 'system', false);
+                };
+                
+                socket.onmessage = function(event) {
+                    console.log('收到消息:', event.data);
+                    receivedCount++;
+                    receivedCountElement.textContent = receivedCount;
+                    
+                    // 尝试解析JSON消息
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'connection-response') {
+                            if (data.success) {
+                                addMessage(`连接成功: ${data.message}`, 'system', false);
+                            } else {
+                                addMessage(`连接失败: ${data.message}`, 'system', false);
+                            }
+                        } else {
+                            addMessage(JSON.stringify(data, null, 2), 'received', false);
+                        }
+                    } catch {
+                        addMessage(event.data, 'received', false);
+                    }
+                };
+                
+                socket.onclose = function(event) {
+                    console.log('WebSocket连接已关闭', event);
+                    updateConnectionStatus('disconnected');
+                    
+                    let closeMessage = 'WebSocket连接已关闭';
+                    if (event.code !== 1000) {
+                        closeMessage += `，代码: ${event.code}`;
+                    }
+                    if (event.reason) {
+                        closeMessage += `，原因: ${event.reason}`;
+                    }
+                    
+                    addMessage(closeMessage, 'system', false);
+                    socket = null;
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    updateConnectionStatus('error');
+                    addMessage('WebSocket连接错误，请检查服务器地址或网络连接', 'system', false);
+                };
+                
+            } catch (error) {
+                console.error('创建WebSocket连接时出错:', error);
+                updateConnectionStatus('error');
+                addMessage(`连接失败: ${error.message}`, 'system', false);
+            }
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus(status) {
+            switch(status) {
+                case 'connected':
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    sendBtn.disabled = false;
+                    isConnected = true;
+                    break;
+                    
+                case 'disconnected':
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    isConnected = false;
+                    break;
+                    
+                case 'connecting':
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    break;
+                    
+                case 'error':
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    isConnected = false;
+                    break;
+            }
+        }
+        
+        // 添加消息到消息记录
+        function addMessage(content, type, isSent = true) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message message-${type}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            let directionText = isSent ? '发送' : '接收';
+            
+            messageElement.innerHTML = `
+                <div>${content}</div>
+                <div class="message-info">
+                    <span>${directionText}</span>
+                    <span>${timeString}</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            
+            // 自动滚动到底部
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // 断开WebSocket连接
+        function disconnectWebSocket() {
+            if (socket && isConnected) {
+                socket.close(1000, '用户主动断开连接');
+            }
+        }
+        
+        // 发送消息
+        function sendMessage() {
+            if (!isConnected || !socket) {
+                alert('未连接到WebSocket服务器');
+                return;
+            }
+            
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('请输入要发送的消息');
+                return;
+            }
+            
+            try {
+                socket.send(message);
+                sentCount++;
+                sentCountElement.textContent = sentCount;
+                addMessage(message, 'sent', true);
+                // messageInput.value = '';
+            } catch (error) {
+                console.error('发送消息时出错:', error);
+                addMessage(`发送失败: ${error.message}`, 'system', false);
+            }
+        }
+        
+        // 初始化WebSocket事件监听
+        function initWebSocketEventListeners() {
+            // 连接按钮
+            connectBtn.addEventListener('click', connectWebSocket);
+            
+            // 断开连接按钮
+            disconnectBtn.addEventListener('click', disconnectWebSocket);
+            
+            // 发送按钮
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // 在输入框中按Enter发送消息
+            messageInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // 在服务器地址输入框中按Enter连接
+            serverUrlInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+            
+            // 在参数1输入框中按Enter连接
+            param1Input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+            
+            // 在参数2输入框中按Enter连接
+            param2Input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    connectWebSocket();
+                }
+            });
+        }
+        
+        // 初始化WebSocket功能
+        function initWebSocket() {
+            initWebSocketEventListeners();
+            updateConnectionStatus('disconnected');
+            
+            // 添加一些示例消息
+            setTimeout(() => {
+                addMessage('这是一个带参数验证的WebSocket演示应用。', 'system', false);
+                addMessage('请填写服务器地址，参数1和参数2为可选。', 'system', false);
+                addMessage('您也可以按Enter键快速连接或发送消息。', 'system', false);
+                addMessage('参数将通过URL查询参数方式传递给服务器。', 'system', false);
+            }, 500);
+        }
+
+        // ==================== AES加密解密功能代码 ====================
+        // 定义固定的密钥和向量
+        const IV = "a1b2c3d4e5f6g7h8";
+        const KEY = "63dTjxISXlwAso0n";
+        
+        // DOM 元素
+        const inputText = document.getElementById('inputText');
+        const resultBox = document.getElementById('resultBox');
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        
+        // 初始化结果框
+        resultBox.textContent = "加密或解密后的结果将显示在这里...";
+        
+        // 加密函数
+        function encryptText(text) {
+            try {
+                // 使用 CryptoJS 进行 AES-CBC 加密
+                const encrypted = CryptoJS.AES.encrypt(
+                    text, 
+                    CryptoJS.enc.Utf8.parse(KEY),
+                    {
+                        iv: CryptoJS.enc.Utf8.parse(IV),
+                        mode: CryptoJS.mode.CBC,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                );
+                
+                // 返回Base64编码的密文
+                return encrypted.toString();
+            } catch (error) {
+                console.error("加密错误:", error);
+                return `加密失败: ${error.message}`;
+            }
+        }
+        
+        // 解密函数
+        function decryptText(ciphertext) {
+            try {
+                // 使用 CryptoJS 进行 AES-CBC 解密
+                const decrypted = CryptoJS.AES.decrypt(
+                    ciphertext,
+                    CryptoJS.enc.Utf8.parse(KEY),
+                    {
+                        iv: CryptoJS.enc.Utf8.parse(IV),
+                        mode: CryptoJS.mode.CBC,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                );
+                
+                // 将解密结果转换为UTF-8字符串
+                return decrypted.toString(CryptoJS.enc.Utf8);
+            } catch (error) {
+                console.error("解密错误:", error);
+                return `解密失败: 请检查输入是否为有效的AES-CBC密文\n错误详情: ${error.message}`;
+            }
+        }
+        
+        // 初始化AES功能
+        function initAES() {
+            // 加密按钮点击事件
+            encryptBtn.addEventListener('click', function() {
+                const text = inputText.value.trim();
+                
+                if (!text) {
+                    resultBox.textContent = "请输入要加密的文本！";
+                    return;
+                }
+                
+                resultBox.textContent = "加密中...";
+                
+                // 短暂延迟以便用户看到"加密中"提示
+                setTimeout(() => {
+                    const encrypted = encryptText(text);
+                    resultBox.textContent = `密文(Base64):\n${encrypted}\n\n密文(Hex):\n${CryptoJS.enc.Base64.parse(encrypted).toString(CryptoJS.enc.Hex)}`;
+                }, 100);
+            });
+            
+            // 解密按钮点击事件
+            decryptBtn.addEventListener('click', function() {
+                const text = inputText.value.trim();
+                
+                if (!text) {
+                    resultBox.textContent = "请输入要解密的密文！";
+                    return;
+                }
+                
+                resultBox.textContent = "解密中...";
+                
+                // 短暂延迟以便用户看到"解密中"提示
+                setTimeout(() => {
+                    const decrypted = decryptText(text);
+                    
+                    if (decrypted) {
+                        resultBox.textContent = `解密成功！\n\n明文:\n${decrypted}`;
+                    } else {
+                        resultBox.textContent = "解密失败：可能输入了无效的密文或格式不正确。";
+                    }
+                }, 100);
+            });
+            
+            // 清空按钮点击事件
+            clearBtn.addEventListener('click', function() {
+                inputText.value = "";
+                resultBox.textContent = "加密或解密后的结果将显示在这里...";
+                inputText.focus();
+            });
+            
+            // 复制按钮点击事件
+            copyBtn.addEventListener('click', function() {
+                const resultText = resultBox.textContent;
+                
+                if (!resultText || resultText.includes("将显示在这里")) {
+                    alert("没有可复制的内容！");
+                    return;
+                }
+                
+                // 使用现代剪贴板API
+                navigator.clipboard.writeText(resultText).then(
+                    function() {
+                        // 临时改变按钮文本和图标
+                        const originalHTML = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                        copyBtn.style.backgroundColor = "#2a9d8f";
+                        
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalHTML;
+                            copyBtn.style.backgroundColor = "";
+                        }, 2000);
+                    },
+                    function(err) {
+                        console.error("复制失败: ", err);
+                        alert("复制失败，请手动选择并复制文本。");
+                    }
+                );
+            });
+            
+            // 添加键盘快捷键支持
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+E 加密
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    encryptBtn.click();
+                }
+                
+                // Ctrl+D 解密
+                if (e.ctrlKey && e.key === 'd') {
+                    e.preventDefault();
+                    decryptBtn.click();
+                }
+                
+                // Ctrl+L 清空
+                if (e.ctrlKey && e.key === 'l') {
+                    e.preventDefault();
+                    clearBtn.click();
+                }
+            });
+        }
+
+        // ==================== 页面初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            initAES();
+        });
+    </script>
+</body>
+</html>
